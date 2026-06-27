@@ -36,7 +36,8 @@
     flex:0 0 auto;pointer-events:none;
   }
   .statusbar b{font-weight:600;font-size:16px}
-  .statusbar .right{opacity:.95}
+  .statusbar .right{opacity:.95;display:inline-flex;align-items:center;gap:8px}
+  .statusbar .sep{opacity:.5}
 
   /* Pager */
   .pager{
@@ -62,7 +63,7 @@
     width:min(58vw,210px);aspect-ratio:1;border-radius:50%;border:2px solid rgba(255,255,255,.2);
     display:flex;align-items:center;justify-content:center;transition:transform .4s var(--ease);
   }
-  .page-suara .bigbtn:active .ring{transform:scale(.95)}
+  .bigbtn:active .ring{transform:scale(.95)}
   /* mic glyph */
   .mic{width:82px;height:98px;position:relative}
   .mic .body{position:absolute;left:19px;top:0;width:44px;height:64px;border-radius:22px;background:var(--ink)}
@@ -90,14 +91,15 @@
     border-radius:20px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;
   }
   .tile:focus-visible,.tile.foc{border-color:rgba(255,255,255,.7);outline:none}
-  .tile .n{font-size:var(--btn);font-weight:600}
-  .tile .d{font-size:var(--fine);opacity:.62;margin-top:3px}
-  .tile .ck{font-size:var(--fine);color:var(--warn);margin-top:5px}
+  .tile{transition:transform .12s var(--ease),border-color .2s}
+  .tile:active{transform:scale(.985)}
+  .tile .ti{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .tile .n{font-size:var(--btn);font-weight:600;line-height:1.15}
+  .tile .d{font-size:var(--fine);opacity:.62;line-height:1.3}
+  .tile .ck{font-size:var(--fine);color:var(--warn);font-weight:500}
   .tile .dist{font-size:var(--fine);color:var(--warn);font-weight:600;white-space:nowrap}
 
   /* Pager chrome */
-  .edge{position:absolute;top:50%;transform:translateY(-50%);font-size:42px;opacity:.22;pointer-events:none;z-index:4;font-weight:300}
-  .edge.l{left:14px}.edge.r{right:14px}
   .pagerbar{
     flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;z-index:5;
     padding:10px 26px max(24px,env(safe-area-inset-bottom));font-size:var(--fine);
@@ -135,7 +137,9 @@
   .guide-zone{
     flex:1 1 auto;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:18px;border:4px solid transparent;border-radius:24px;margin:0 12px;padding:24px;transition:border-color .25s;
+    background:none;color:inherit;font:inherit;cursor:pointer;
   }
+  .guide-zone:focus-visible{outline:none;border-color:rgba(255,255,255,.4)}
   .guide-zone.obstacle{border-color:var(--warn)}
   .arrow{font-size:120px;line-height:.8;font-weight:300}
   .guide-instr{font-size:var(--hero);font-weight:600;letter-spacing:-.01em;text-align:center;line-height:1.05;text-wrap:balance}
@@ -166,7 +170,7 @@
 
   <header class="statusbar">
     <b id="clock">9:41</b>
-    <span class="right" id="status">GPS: Mencari…&nbsp; •&nbsp; <span id="batt">Baterai</span></span>
+    <span class="right"><span id="gpsStat">GPS: Mencari…</span><span class="sep">•</span><span id="batt">Baterai 80%</span></span>
   </header>
 
   <main class="pager" id="pager" aria-label="Halaman utama. Geser kiri untuk Favorit, geser kanan untuk SOS.">
@@ -198,9 +202,6 @@
 
   </main>
 
-  <span class="edge l" aria-hidden="true">‹</span>
-  <span class="edge r" aria-hidden="true">›</span>
-
   <nav class="pagerbar" aria-hidden="true">
     <span class="swipe" id="swL">‹ Favorit</span>
     <span class="dots" id="dots"><i class="dot"></i><i class="dot on"></i><i class="dot"></i></span>
@@ -230,7 +231,7 @@
   <!-- Guide overlay -->
   <div class="overlay ov-guide" id="ov-guide" role="dialog" aria-label="Panduan navigasi aktif">
     <div class="guide-route" id="guideRoute">Rute aktif</div>
-    <button class="guide-zone" id="guideZone" style="border:0;background:none;color:inherit;font:inherit;cursor:pointer"
+    <button class="guide-zone" id="guideZone"
       aria-label="Status navigasi aktif. Ketuk untuk mengulang instruksi suara terakhir.">
       <span class="arrow" id="guideArrow">↑</span>
       <span class="guide-instr" id="guideInstr">LURUS<br>15 METER</span>
@@ -304,8 +305,12 @@
   }
   pager.addEventListener('scroll',()=>{ requestAnimationFrame(syncDots); },{passive:true});
   function goPage(i){ pager.scrollTo({left:pager.clientWidth*i,behavior:'smooth'}); }
-  // start on center (Input Suara)
-  window.addEventListener('load',()=>{ pager.scrollLeft=pager.clientWidth; syncDots(); });
+  // start on center (Input Suara); ?#fav/#sos/#listen/#guide/#calling untuk deep-link & uji
+  function applyHash(){ const h=location.hash.slice(1);
+    if(h==='fav') goPage(0); else if(h==='sos') goPage(2);
+    else if(h==='listen') startListening(); else if(h==='calling') startSOS();
+    else if(h==='guide') startGuide(PLACES.find(p=>p.id==='perpus')); }
+  window.addEventListener('load',()=>{ pager.scrollLeft=pager.clientWidth; syncDots(); applyHash(); });
   window.addEventListener('resize',()=>{ syncDots(); });
   // tap swipe labels
   $('swL').addEventListener('click',()=>goPage(0));
@@ -318,7 +323,7 @@
       const b=document.createElement('button');
       b.className='tile'+(p.id===FOCUS_DEFAULT?' foc':'');
       b.setAttribute('aria-label',`${p.name}. ${p.desc}. Jarak ${p.dist}. Ketuk dua kali untuk memulai rute.`);
-      b.innerHTML=`<span><span class="n">${p.name}</span><span class="d">${p.desc}</span>${p.id===FOCUS_DEFAULT?'<span class="ck">Ketuk dua kali untuk pilih</span>':''}</span><span class="dist">${p.dist}</span>`;
+      b.innerHTML=`<span class="ti"><span class="n">${p.name}</span><span class="d">${p.desc}</span>${p.id===FOCUS_DEFAULT?'<span class="ck">Ketuk dua kali untuk pilih</span>':''}</span><span class="dist">${p.dist}</span>`;
       activatable(b,()=>startGuide(p));
       $('favlist').appendChild(b);
     });
@@ -405,13 +410,12 @@
   function tickClock(){ const d=new Date(); $('clock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
   tickClock(); setInterval(tickClock,15000);
   if(navigator.getBattery){ navigator.getBattery().then(b=>{ const u=()=>$('batt').textContent='Baterai '+Math.round(b.level*100)+'%'; u(); b.addEventListener('levelchange',u); }); }
-  else $('batt').textContent='Baterai 80%';
   if(navigator.geolocation){
     navigator.geolocation.watchPosition(
-      pos=>{ const a=pos.coords.accuracy; $('status').firstChild.textContent=a<15?'GPS: Akurat':'GPS: Lemah'; },
-      ()=>{ $('status').firstChild.textContent='GPS: Nonaktif'; },{enableHighAccuracy:true,maximumAge:8000}
+      pos=>{ $('gpsStat').textContent=pos.coords.accuracy<15?'GPS: Akurat':'GPS: Lemah'; },
+      ()=>{ $('gpsStat').textContent='GPS: Nonaktif'; },{enableHighAccuracy:true,maximumAge:8000}
     );
-  } else $('status').firstChild.textContent='GPS: Akurat';
+  } else $('gpsStat').textContent='GPS: Akurat';
 
   renderFav();
 

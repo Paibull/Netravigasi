@@ -232,7 +232,7 @@
     <div class="sub" style="margin-top:8px">Pusat Keamanan & Keselamatan Kampus</div>
     <div class="hint" id="gps" style="margin-top:10px;opacity:.9;max-width:none">Mengirim lokasi GPS Anda…</div></div>
     <div class="ov-actions">
-      <a class="pill" id="callLink" href="tel:+62315994251">Telepon SKK ITS sekarang</a>
+      <!-- <a class="pill" id="callLink" href="tel:+62315994251">Telepon SKK ITS sekarang</a> -->
       <button class="pill ghost" id="callCancel">Batalkan</button>
     </div>
   </div>
@@ -309,7 +309,7 @@
 
   /* ---------- Pager dots ---------- */
   const pager=$('pager');
-  const PAGE_SAYS=['Halaman lokasi favorit. Geser kanan untuk kembali ke pencarian suara.','Halaman pencarian dengan suara. Ketuk layar dua kali untuk mulai.','Halaman darurat. Ketuk dua kali untuk menghubungi keamanan kampus.'];
+  const PAGE_SAYS=['Halaman lokasi favorit.','Halaman pencarian dengan suara. Ketuk layar dua kali untuk mulai.','Halaman darurat. Ketuk dua kali untuk menghubungi keamanan kampus.'];
   let lastAnnPage=-1, annTimer=null;
   function syncDots(){
     const w=pager.clientWidth||1; const i=Math.round(pager.scrollLeft/w);
@@ -345,7 +345,7 @@
       const b=document.createElement('button');
       b.className='favcard';
       b.setAttribute('aria-label',`${p.name}. Jarak ${p.dist}. Ketuk dua kali untuk memulai rute.`);
-      b.innerHTML=`<span class="fc-num">${i+1} / ${PLACES.length}</span><span class="fc-name">${p.name}</span><span class="fc-dist">${p.dist}</span><span class="fc-hint">Ketuk dua kali untuk mulai rute</span>`;
+      b.innerHTML=`<span class="fc-name">${p.name}</span><span class="fc-dist">${p.dist}</span><span class="fc-hint">Ketuk dua kali untuk mulai rute</span>`;
       activatable(b,()=>startGuide(p));
       sc.appendChild(b);
     });
@@ -368,16 +368,23 @@
     recog.onerror=()=>failVoice('Suara tidak terdengar.');
     recog.onnomatch=()=>failVoice('Tujuan tidak dikenali.');
   }
-  let failTimer=null;
+  let failTimer=null, prepTimer=null;
   const LISTEN_TIMEOUT=9000;   // ms tunggu suara sebelum auto-gagal
+  const PREP_DELAY=2000;       // ms delay sebelum mulai mendengarkan
   function startListening(){
-    openOv('ov-listen'); vibe(H.straight); $('listenStatus').textContent='Sebutkan tujuan Anda';
-    speak('Mendengarkan. Sebutkan nama gedung tujuan.');
+    openOv('ov-listen'); vibe(H.straight);
+    $('listenStatus').textContent='Bersiap mendengarkan…';
+    speak('Sebutkan nama gedung tujuan anda.');
     if(!recog){ $('listenStatus').textContent='Browser tak mendukung pengenalan suara. Gunakan Favorit (geser kiri).'; return; }
-    try{ recog.start(); }catch(e){}
-    // auto-gagal kalau tak ada suara dalam LISTEN_TIMEOUT ms
-    clearTimeout(failTimer);
-    failTimer=setTimeout(()=>{ try{recog.stop()}catch(e){}; failVoice('Tidak ada suara terdengar.'); }, LISTEN_TIMEOUT);
+    clearTimeout(prepTimer);
+    prepTimer=setTimeout(()=>{
+      $('listenStatus').textContent='Sebutkan tujuan Anda';
+      vibe(H.tap);
+      try{ recog.start(); }catch(e){}
+      // auto-gagal kalau tak ada suara dalam LISTEN_TIMEOUT ms
+      clearTimeout(failTimer);
+      failTimer=setTimeout(()=>{ try{recog.stop()}catch(e){}; failVoice('Tidak ada suara terdengar.'); }, LISTEN_TIMEOUT);
+    }, PREP_DELAY);
   }
   function handleVoice(t){
     clearTimeout(failTimer);
@@ -387,11 +394,11 @@
   }
   function failVoice(msg){
     clearTimeout(failTimer);
-    $('listenStatus').textContent=msg+' Membuka Favorit…';
-    vibe(H.left); speak((msg||'Tujuan tidak dikenali.')+' Ketuk daftar favorit untuk memilih manual.');
-    setTimeout(()=>{ closeOv('ov-listen'); goPage(0); },1600);
+    $('listenStatus').textContent=msg+' Silakan coba lagi.';
+    vibe(H.left); speak((msg||'Tujuan tidak dikenali.')+' Silakan coba lagi.');
+    setTimeout(()=>{ closeOv('ov-listen'); goPage(1); },1600);
   }
-  $('listenCancel').addEventListener('click',()=>{ clearTimeout(failTimer); try{recog&&recog.stop()}catch(e){}; closeOv('ov-listen'); speechSynthesis.cancel(); });
+  $('listenCancel').addEventListener('click',()=>{ clearTimeout(prepTimer); clearTimeout(failTimer); try{recog&&recog.stop()}catch(e){}; closeOv('ov-listen'); speechSynthesis.cancel(); });
 
   /* ---------- Guide / turn-by-turn (F2 + F3 + F4) ---------- */
   function buildSteps(name){

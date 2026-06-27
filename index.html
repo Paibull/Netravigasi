@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="description" content="Asisten navigasi suara untuk tunanetra & low vision — Kampus ITS">
+<meta name="description" content="Asisten navigasi suara untuk tunanetra & low vision, Kampus ITS">
 <title>KampusGuide Access</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon.svg">
@@ -90,13 +90,12 @@
     border:2px solid transparent;background:var(--tile);color:inherit;font:inherit;text-align:left;cursor:pointer;
     border-radius:20px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;
   }
-  .tile:focus-visible,.tile.foc{border-color:rgba(255,255,255,.7);outline:none}
+  .tile:focus-visible{border-color:rgba(255,255,255,.7);outline:none}
   .tile{transition:transform .12s var(--ease),border-color .2s}
   .tile:active{transform:scale(.985)}
   .tile .ti{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
   .tile .n{font-size:var(--btn);font-weight:600;line-height:1.15}
   .tile .d{font-size:var(--fine);opacity:.62;line-height:1.3}
-  .tile .ck{font-size:var(--fine);color:var(--warn);font-weight:500}
   .tile .dist{font-size:var(--fine);color:var(--warn);font-weight:600;white-space:nowrap}
 
   /* Pager chrome */
@@ -176,7 +175,7 @@
   <main class="pager" id="pager" aria-label="Halaman utama. Geser kiri untuk Favorit, geser kanan untuk SOS.">
 
     <section class="page page-fav" id="page-fav" aria-label="Halaman Favorit">
-      <div class="favhead"><h1>Favorit</h1><p id="favsub">5 tujuan tersimpan — tersedia mode luring</p></div>
+      <div class="favhead"><h1>Favorit</h1><p id="favsub">5 tujuan tersimpan, tersedia mode luring</p></div>
       <div class="favlist" id="favlist"></div>
     </section>
 
@@ -253,13 +252,12 @@
 
   /* ---------- Data: gedung ITS ---------- */
   const PLACES=[
-    {id:'tower1', name:'Tower 1',          desc:'Ruang kelas MIPA · 11 lantai',          dist:'± 320 m', kw:['tower satu','tower 1','menara mipa','mipa']},
-    {id:'tower2', name:'Tower 2',          desc:'Ruang kuliah bersama · lobi & showroom',dist:'± 450 m', kw:['tower dua','tower 2']},
-    {id:'perpus', name:'Perpustakaan ITS', desc:'Perpustakaan pusat & ruang baca',       dist:'± 210 m', kw:['perpustakaan','perpus','library']},
-    {id:'kantin', name:'Kantin Pusat',     desc:'Pusat kuliner mahasiswa',               dist:'± 140 m', kw:['kantin','makan','kuliner']},
-    {id:'ccws',   name:'CCWS',             desc:'Creative Co-Working Space · kolaboratif',dist:'± 180 m', kw:['ccws','co working','coworking','kreatif']},
+    {id:'tower1', name:'Tower 1',          desc:'Ruang kelas MIPA, 11 lantai',     dist:'± 320 m', kw:['tower satu','tower 1','menara mipa','mipa']},
+    {id:'tower2', name:'Tower 2',          desc:'Ruang kuliah & showroom',         dist:'± 450 m', kw:['tower dua','tower 2']},
+    {id:'perpus', name:'Perpustakaan ITS', desc:'Perpustakaan pusat & ruang baca', dist:'± 210 m', kw:['perpustakaan','perpus','library']},
+    {id:'kantin', name:'Kantin Pusat',     desc:'Pusat kuliner mahasiswa',         dist:'± 140 m', kw:['kantin','makan','kuliner']},
+    {id:'ccws',   name:'CCWS',             desc:'Ruang kolaboratif co-working',    dist:'± 180 m', kw:['ccws','co working','coworking','kreatif']},
   ];
-  const FOCUS_DEFAULT='perpus';
 
   /* ---------- Haptics (F3) ---------- */
   const H={ tap:[15], straight:[200], right:[200,100,200], left:[600], arrive:[300,150,300,150,300] };
@@ -321,9 +319,9 @@
     $('favlist').innerHTML='';
     PLACES.forEach(p=>{
       const b=document.createElement('button');
-      b.className='tile'+(p.id===FOCUS_DEFAULT?' foc':'');
+      b.className='tile';
       b.setAttribute('aria-label',`${p.name}. ${p.desc}. Jarak ${p.dist}. Ketuk dua kali untuk memulai rute.`);
-      b.innerHTML=`<span class="ti"><span class="n">${p.name}</span><span class="d">${p.desc}</span>${p.id===FOCUS_DEFAULT?'<span class="ck">Ketuk dua kali untuk pilih</span>':''}</span><span class="dist">${p.dist}</span>`;
+      b.innerHTML=`<span class="ti"><span class="n">${p.name}</span><span class="d">${p.desc}</span></span><span class="dist">${p.dist}</span>`;
       activatable(b,()=>startGuide(p));
       $('favlist').appendChild(b);
     });
@@ -341,7 +339,7 @@
   function startListening(){
     openOv('ov-listen'); vibe(H.straight); $('listenStatus').textContent='Sebutkan tujuan Anda';
     speak('Mendengarkan. Sebutkan nama gedung tujuan.');
-    if(!recog){ $('listenStatus').textContent='Browser tak mendukung pengenalan suara — gunakan Favorit (geser kiri).'; return; }
+    if(!recog){ $('listenStatus').textContent='Browser tak mendukung pengenalan suara. Gunakan Favorit (geser kiri).'; return; }
     try{ recog.start(); }catch(e){}
     clearTimeout(failTimer); failTimer=setTimeout(()=>{},9000);
   }
@@ -393,7 +391,7 @@
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(
         pos=>{ const {latitude:la,longitude:lo}=pos.coords; $('gps').textContent=`Lokasi terkirim: ${la.toFixed(4)}, ${lo.toFixed(4)}`; },
-        ()=>{ $('gps').textContent='Lokasi GPS tidak tersedia — sebutkan posisi Anda saat ditelepon.'; },
+        ()=>{ $('gps').textContent='Lokasi GPS tidak tersedia. Sebutkan posisi Anda saat ditelepon.'; },
         {enableHighAccuracy:true,timeout:6000}
       );
     }

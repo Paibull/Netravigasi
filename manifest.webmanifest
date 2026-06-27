@@ -1,7 +1,7 @@
 {
   "name": "KampusGuide Access",
   "short_name": "KampusGuide",
-  "description": "Asisten navigasi suara untuk tunanetra & low vision — Kampus ITS",
+  "description": "Asisten navigasi suara untuk tunanetra & low vision, Kampus ITS",
   "lang": "id",
   "start_url": "./",
   "scope": "./",

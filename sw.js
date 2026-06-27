@@ -1,4 +1,4 @@
-// KampusGuide Access — offline cache (PRD §9.2 navigasi luring)
+// KampusGuide Access offline cache (PRD 9.2 navigasi luring)
 const CACHE = 'kampusguide-v1';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 

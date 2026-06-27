@@ -1,7 +1,7 @@
 # KampusGuide Access
 
 Asisten navigasi suara untuk mahasiswa/pengunjung tunanetra & *low vision* di Kampus ITS.
-Web app (PWA) satu file, tanpa build — implementasi langsung dari `docs/prd_imk.md`.
+Web app (PWA) satu file, tanpa build. Implementasi langsung dari `docs/prd_imk.md`.
 
 ## Jalankan
 
@@ -25,7 +25,7 @@ mis. di-deploy ke Vercel/Netlify/GitHub Pages) untuk haptic + voice.
 |-----|--------------|
 | F1 Voice-first search | `webkitSpeechRecognition` (id-ID); ucapan dicocokkan ke gedung |
 | F2 Audio turn-by-turn | `speechSynthesis` (TTS id-ID) tiap langkah |
-| F3 Haptic spasial | `navigator.vibrate` — lurus `[200]`, kanan `[200,100,200]`, kiri `[600]`, tiba pola berulang |
+| F3 Haptic spasial | `navigator.vibrate`: lurus `[200]`, kanan `[200,100,200]`, kiri `[600]`, tiba pola berulang |
 | F4 Landmark/rintangan | Peringatan kuning + bingkai kuning + suara otomatis |
 | F5 SOS one-tap | Overlay panggilan + `tel:` SKK ITS + kirim koordinat `geolocation` |
 | §6 Token kontras tinggi | CSS variables: canvas/ink/warn/action/sos/tile |

@@ -1,5 +1,5 @@
 // KampusGuide Access offline cache (PRD 9.2 navigasi luring)
-const CACHE = 'kampusguide-v5';
+const CACHE = 'kampusguide-v6';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('message', e => { if (e.data === 'skip') self.skipWaiting(); });

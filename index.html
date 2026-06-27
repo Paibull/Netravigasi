@@ -203,7 +203,7 @@
 
     <section class="page page-sos" id="page-sos" aria-label="Halaman SOS Darurat">
       <button class="bigbtn" id="sosBtn"
-        aria-label="Tombol bantuan darurat SOS. Ketuk dua kali untuk menghubungi Pusat Keamanan Kampus ITS.">
+        aria-label="Tombol bantuan darurat SOS. Ketuk dua kali untuk menghubungi Keamanan Kampus.">
         <span class="ring"><span class="sostext">SOS</span></span>
         <span class="title">PANGGILAN DARURAT</span>
         <span class="sub">Ketuk dua kali untuk hubungi SKK ITS</span>
@@ -440,7 +440,7 @@
   /* ---------- SOS (F5) ---------- */
   function startSOS(){
     closeAll(); openOv('ov-calling'); vibe(H.arrive);
-    speak('Menghubungi Pusat Keamanan Kampus ITS. Mengirim lokasi Anda.');
+    speak('Menghubungi Pihak Keamanan Kampus. Mengirim lokasi Anda.');
     if(navigator.geolocation){
       navigator.geolocation.getCurrentPosition(
         pos=>{ const {latitude:la,longitude:lo}=pos.coords; $('gps').textContent=`Lokasi terkirim: ${la.toFixed(4)}, ${lo.toFixed(4)}`; },

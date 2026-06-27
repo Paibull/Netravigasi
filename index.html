@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="Asisten navigasi suara untuk tunanetra & low vision — Kampus ITS">
+<title>KampusGuide Access</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root{
+    --canvas:#000; --ink:#fff; --warn:#ff0; --action:#0066cc; --sos:#ff453a; --tile:#272729;
+    --hero:clamp(34px,9vw,40px); --lead:clamp(20px,5.5vw,24px); --btn:20px; --fine:14px;
+    --ease:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:#0a0a0a;color:var(--ink);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",Inter,system-ui,Segoe UI,Roboto,sans-serif;
+    letter-spacing:-.01em;overscroll-behavior:none;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .app{
+    position:relative;width:100%;max-width:440px;height:100dvh;max-height:960px;
+    background:var(--canvas);overflow:hidden;border-radius:0;
+    display:flex;flex-direction:column;
+  }
+  @media(min-width:460px){ .app{border-radius:46px;box-shadow:0 22px 70px rgba(0,0,0,.5)} }
+
+  /* Status bar */
+  .statusbar{
+    position:relative;z-index:5;display:flex;justify-content:space-between;align-items:center;
+    padding:max(18px,env(safe-area-inset-top)) 26px 8px;font-size:var(--fine);font-weight:400;
+    flex:0 0 auto;pointer-events:none;
+  }
+  .statusbar b{font-weight:600;font-size:16px}
+  .statusbar .right{opacity:.95}
+
+  /* Pager */
+  .pager{
+    flex:1 1 auto;display:flex;overflow-x:auto;overflow-y:hidden;
+    scroll-snap-type:x mandatory;scroll-behavior:smooth;
+    -ms-overflow-style:none;scrollbar-width:none;
+  }
+  .pager::-webkit-scrollbar{display:none}
+  .page{
+    flex:0 0 100%;width:100%;height:100%;scroll-snap-align:center;scroll-snap-stop:always;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:8px 24px 0;position:relative;
+  }
+
+  /* Big tappable action (mic / sos) */
+  .bigbtn{
+    border:none;background:transparent;color:inherit;font:inherit;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:26px;width:100%;
+    padding:24px;border-radius:32px;outline:none;
+  }
+  .bigbtn:focus-visible{box-shadow:0 0 0 4px var(--warn)}
+  .ring{
+    width:min(58vw,210px);aspect-ratio:1;border-radius:50%;border:2px solid rgba(255,255,255,.2);
+    display:flex;align-items:center;justify-content:center;transition:transform .4s var(--ease);
+  }
+  .page-suara .bigbtn:active .ring{transform:scale(.95)}
+  /* mic glyph */
+  .mic{width:82px;height:98px;position:relative}
+  .mic .body{position:absolute;left:19px;top:0;width:44px;height:64px;border-radius:22px;background:var(--ink)}
+  .mic .stem{position:absolute;left:37.5px;top:66px;width:7px;height:15px;background:var(--ink)}
+  .mic .base{position:absolute;left:14px;top:82px;width:54px;height:7px;border-radius:3px;background:var(--ink)}
+
+  .title{font-size:var(--hero);font-weight:600;letter-spacing:-.02em;text-align:center;text-wrap:balance}
+  .sub{font-size:var(--lead);font-weight:400;text-align:center;text-wrap:balance}
+  .hint{font-size:var(--fine);opacity:.65;text-align:center;max-width:300px;text-wrap:balance}
+
+  /* SOS page */
+  .page-sos{background:var(--sos)}
+  .page-sos .ring{border-color:rgba(255,255,255,.45);border-width:3px}
+  .sostext{font-size:var(--hero);font-weight:600;letter-spacing:-.01em}
+
+  /* Favorit page */
+  .page-fav{justify-content:flex-start;padding-top:6px;overflow-y:auto;scrollbar-width:none}
+  .page-fav::-webkit-scrollbar{display:none}
+  .favhead{align-self:stretch;text-align:left;padding:4px 2px 8px}
+  .favhead h1{font-size:var(--hero);font-weight:600;letter-spacing:-.02em}
+  .favhead p{font-size:var(--fine);opacity:.6;margin-top:2px}
+  .favlist{align-self:stretch;display:flex;flex-direction:column;gap:12px;padding-bottom:14px}
+  .tile{
+    border:2px solid transparent;background:var(--tile);color:inherit;font:inherit;text-align:left;cursor:pointer;
+    border-radius:20px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;
+  }
+  .tile:focus-visible,.tile.foc{border-color:rgba(255,255,255,.7);outline:none}
+  .tile .n{font-size:var(--btn);font-weight:600}
+  .tile .d{font-size:var(--fine);opacity:.62;margin-top:3px}
+  .tile .ck{font-size:var(--fine);color:var(--warn);margin-top:5px}
+  .tile .dist{font-size:var(--fine);color:var(--warn);font-weight:600;white-space:nowrap}
+
+  /* Pager chrome */
+  .edge{position:absolute;top:50%;transform:translateY(-50%);font-size:42px;opacity:.22;pointer-events:none;z-index:4;font-weight:300}
+  .edge.l{left:14px}.edge.r{right:14px}
+  .pagerbar{
+    flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;z-index:5;
+    padding:10px 26px max(24px,env(safe-area-inset-bottom));font-size:var(--fine);
+  }
+  .pagerbar .swipe{opacity:.75}
+  .pagerbar .swipe.sos{color:#ffd1cd;font-weight:600}
+  .dots{display:flex;gap:8px;align-items:center}
+  .dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.3);transition:all .3s var(--ease)}
+  .dot.on{width:28px;border-radius:5px;background:#fff}
+  .page-sos~.pagerbar,.onfav .pagerbar{} /* placeholder */
+
+  /* Overlays */
+  .overlay{
+    position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;gap:28px;padding:28px;
+    opacity:0;visibility:hidden;transform:translateY(24px);
+    transition:opacity .32s var(--ease),transform .32s var(--ease),visibility .32s;
+  }
+  .overlay.open{opacity:1;visibility:visible;transform:none}
+  .ov-listen{background:var(--action)}
+  .ov-calling{background:var(--sos)}
+  .ov-guide{background:var(--canvas);justify-content:flex-start;gap:0}
+
+  /* listening rings */
+  .pulse{width:min(70vw,280px);aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative}
+  .pulse i{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.2)}
+  .pulse i.r1{inset:0;animation:pulse 2s var(--ease) infinite}
+  .pulse i.r2{inset:14%;border-color:rgba(255,255,255,.3);animation:pulse 2s var(--ease) infinite .4s}
+  .pulse .disc{width:46%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
+  .ov-calling .disc{background:#fff;color:var(--sos)}
+  @keyframes pulse{0%{transform:scale(.96);opacity:.9}70%{transform:scale(1.08);opacity:.15}100%{transform:scale(.96);opacity:.9}}
+
+  /* guide */
+  .guide-route{font-size:var(--fine);opacity:.85;padding:max(14px,env(safe-area-inset-top)) 24px 10px;flex:0 0 auto}
+  .guide-zone{
+    flex:1 1 auto;align-self:stretch;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:18px;border:4px solid transparent;border-radius:24px;margin:0 12px;padding:24px;transition:border-color .25s;
+  }
+  .guide-zone.obstacle{border-color:var(--warn)}
+  .arrow{font-size:120px;line-height:.8;font-weight:300}
+  .guide-instr{font-size:var(--hero);font-weight:600;letter-spacing:-.01em;text-align:center;line-height:1.05;text-wrap:balance}
+  .guide-warn{font-size:var(--lead);color:var(--warn);text-align:center;text-wrap:balance;min-height:1.2em}
+  .guide-rep{font-size:var(--fine);opacity:.6}
+  .guide-cancel{
+    flex:0 0 auto;align-self:stretch;background:var(--tile);border:none;color:var(--sos);font:inherit;font-weight:600;font-size:var(--btn);
+    padding:22px 24px max(28px,env(safe-area-inset-bottom));cursor:pointer;text-align:center;
+  }
+  .guide-cancel small{display:block;color:rgba(255,255,255,.6);font-weight:400;font-size:var(--fine);margin-top:4px}
+
+  .ov-actions{display:flex;flex-direction:column;gap:14px;align-items:center}
+  .pill{
+    background:#fff;color:#000;border:none;font:inherit;font-weight:600;font-size:var(--btn);
+    padding:16px 30px;border-radius:40px;cursor:pointer;text-decoration:none;display:inline-block;
+  }
+  .ghost{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.6)}
+
+  .sr-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header class="statusbar">
+    <b id="clock">9:41</b>
+    <span class="right" id="status">GPS: Mencari…&nbsp; •&nbsp; <span id="batt">Baterai</span></span>
+  </header>
+
+  <main class="pager" id="pager" aria-label="Halaman utama. Geser kiri untuk Favorit, geser kanan untuk SOS.">
+
+    <section class="page page-fav" id="page-fav" aria-label="Halaman Favorit">
+      <div class="favhead"><h1>Favorit</h1><p id="favsub">5 tujuan tersimpan — tersedia mode luring</p></div>
+      <div class="favlist" id="favlist"></div>
+    </section>
+
+    <section class="page page-suara" id="page-suara" aria-label="Halaman Input Suara">
+      <button class="bigbtn" id="micBtn"
+        aria-label="Tombol cari lokasi dengan suara. Ketuk dua kali untuk mulai merekam.">
+        <span class="ring"><span class="mic"><span class="body"></span><span class="stem"></span><span class="base"></span></span></span>
+        <span class="title">INPUT SUARA</span>
+        <span class="sub">Ketuk dua kali untuk bicara</span>
+        <span class="hint">Lalu sebutkan nama gedung atau ruang tujuan</span>
+      </button>
+    </section>
+
+    <section class="page page-sos" id="page-sos" aria-label="Halaman SOS Darurat">
+      <button class="bigbtn" id="sosBtn"
+        aria-label="Tombol bantuan darurat SOS. Ketuk dua kali untuk menghubungi Pusat Keamanan Kampus ITS.">
+        <span class="ring"><span class="sostext">SOS</span></span>
+        <span class="title">PANGGILAN DARURAT</span>
+        <span class="sub">Ketuk dua kali untuk hubungi SKK ITS</span>
+        <span class="hint">Lokasi GPS Anda dikirim otomatis ke petugas</span>
+      </button>
+    </section>
+
+  </main>
+
+  <span class="edge l" aria-hidden="true">‹</span>
+  <span class="edge r" aria-hidden="true">›</span>
+
+  <nav class="pagerbar" aria-hidden="true">
+    <span class="swipe" id="swL">‹ Favorit</span>
+    <span class="dots" id="dots"><i class="dot"></i><i class="dot on"></i><i class="dot"></i></span>
+    <span class="swipe sos" id="swR">SOS ›</span>
+  </nav>
+
+  <!-- Listening overlay -->
+  <div class="overlay ov-listen" id="ov-listen" role="dialog" aria-label="Mendengarkan input suara">
+    <div class="pulse"><i class="r1"></i><i class="r2"></i><span class="disc"><span class="mic"><span class="body"></span><span class="stem"></span><span class="base"></span></span></span></div>
+    <div><div class="title" id="listenTitle">MENDENGARKAN…</div>
+    <div class="sub" id="listenStatus" style="margin-top:10px">Sebutkan tujuan Anda</div></div>
+    <button class="pill ghost" id="listenCancel">Ketuk untuk berhenti</button>
+  </div>
+
+  <!-- Calling overlay -->
+  <div class="overlay ov-calling" id="ov-calling" role="dialog" aria-label="Memanggil SKK ITS">
+    <div class="pulse"><i class="r1"></i><i class="r2"></i><span class="disc"><span class="sostext" style="font-size:40px;font-weight:600">SOS</span></span></div>
+    <div><div class="title">MENGHUBUNGI SKK ITS</div>
+    <div class="sub" style="margin-top:8px">Pusat Keamanan & Keselamatan Kampus</div>
+    <div class="hint" id="gps" style="margin-top:10px;opacity:.9">Mengirim lokasi GPS Anda…</div></div>
+    <div class="ov-actions">
+      <a class="pill" id="callLink" href="tel:+62315994251">Telepon SKK ITS sekarang</a>
+      <button class="pill ghost" id="callCancel">Batalkan</button>
+    </div>
+  </div>
+
+  <!-- Guide overlay -->
+  <div class="overlay ov-guide" id="ov-guide" role="dialog" aria-label="Panduan navigasi aktif">
+    <div class="guide-route" id="guideRoute">Rute aktif</div>
+    <button class="guide-zone" id="guideZone" style="border:0;background:none;color:inherit;font:inherit;cursor:pointer"
+      aria-label="Status navigasi aktif. Ketuk untuk mengulang instruksi suara terakhir.">
+      <span class="arrow" id="guideArrow">↑</span>
+      <span class="guide-instr" id="guideInstr">LURUS<br>15 METER</span>
+      <span class="guide-warn" id="guideWarn"></span>
+      <span class="guide-rep">Ketuk untuk ulangi instruksi</span>
+    </button>
+    <button class="guide-cancel" id="guideCancel" aria-label="Batalkan navigasi. Ketuk dua kali untuk mengakhiri rute.">
+      BATALKAN RUTE<small>Ketuk dua kali untuk mengakhiri</small>
+    </button>
+  </div>
+
+  <div class="sr-live" id="live" aria-live="assertive" role="status"></div>
+</div>
+
+<script>
+(()=>{
+  'use strict';
+  const $=id=>document.getElementById(id);
+
+  /* ---------- Data: gedung ITS ---------- */
+  const PLACES=[
+    {id:'tower1', name:'Tower 1',          desc:'Ruang kelas MIPA · 11 lantai',          dist:'± 320 m', kw:['tower satu','tower 1','menara mipa','mipa']},
+    {id:'tower2', name:'Tower 2',          desc:'Ruang kuliah bersama · lobi & showroom',dist:'± 450 m', kw:['tower dua','tower 2']},
+    {id:'perpus', name:'Perpustakaan ITS', desc:'Perpustakaan pusat & ruang baca',       dist:'± 210 m', kw:['perpustakaan','perpus','library']},
+    {id:'kantin', name:'Kantin Pusat',     desc:'Pusat kuliner mahasiswa',               dist:'± 140 m', kw:['kantin','makan','kuliner']},
+    {id:'ccws',   name:'CCWS',             desc:'Creative Co-Working Space · kolaboratif',dist:'± 180 m', kw:['ccws','co working','coworking','kreatif']},
+  ];
+  const FOCUS_DEFAULT='perpus';
+
+  /* ---------- Haptics (F3) ---------- */
+  const H={ tap:[15], straight:[200], right:[200,100,200], left:[600], arrive:[300,150,300,150,300] };
+  const vibe=p=>{ try{ navigator.vibrate&&navigator.vibrate(p); }catch(e){} };
+
+  /* ---------- TTS (F2) + live region ---------- */
+  let voiceID=null;
+  function pickVoice(){ const vs=speechSynthesis.getVoices(); voiceID=vs.find(v=>/id(-|_)?ID/i.test(v.lang))||vs.find(v=>/^id/i.test(v.lang))||null; }
+  if('speechSynthesis'in window){ pickVoice(); speechSynthesis.onvoiceschanged=pickVoice; }
+  function speak(text,{interrupt=true}={}){
+    $('live').textContent=text;
+    if(!('speechSynthesis'in window))return;
+    if(interrupt) speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text); u.lang='id-ID'; u.rate=1.02; if(voiceID)u.voice=voiceID;
+    speechSynthesis.speak(u);
+  }
+  const announce=t=>{ if(t) speak(t); };
+
+  /* ---------- Double-tap / activate (anti-misclick, F: error rate) ---------- */
+  function activatable(el,onConfirm){
+    let last=0,sx=0,sy=0,moved=false;
+    el.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;moved=false;});
+    el.addEventListener('pointermove',e=>{ if(Math.abs(e.clientX-sx)>12||Math.abs(e.clientY-sy)>12)moved=true; });
+    el.addEventListener('pointerup',e=>{
+      if(moved)return;
+      const now=Date.now();
+      if(now-last<460){ last=0; onConfirm(); }
+      else { last=now; announce(el.getAttribute('aria-label')||el.dataset.say||el.textContent.trim()); vibe(H.tap); }
+    });
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); onConfirm(); } });
+  }
+
+  /* ---------- Overlays ---------- */
+  const openOv=id=>{ $(id).classList.add('open'); };
+  const closeOv=id=>{ $(id).classList.remove('open'); };
+  const closeAll=()=>{ document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open')); };
+
+  /* ---------- Pager dots ---------- */
+  const pager=$('pager');
+  function syncDots(){
+    const w=pager.clientWidth||1; const i=Math.round(pager.scrollLeft/w);
+    $('dots').querySelectorAll('.dot').forEach((d,k)=>d.classList.toggle('on',k===i));
+  }
+  pager.addEventListener('scroll',()=>{ requestAnimationFrame(syncDots); },{passive:true});
+  function goPage(i){ pager.scrollTo({left:pager.clientWidth*i,behavior:'smooth'}); }
+  // start on center (Input Suara)
+  window.addEventListener('load',()=>{ pager.scrollLeft=pager.clientWidth; syncDots(); });
+  window.addEventListener('resize',()=>{ syncDots(); });
+  // tap swipe labels
+  $('swL').addEventListener('click',()=>goPage(0));
+  $('swR').addEventListener('click',()=>goPage(2));
+
+  /* ---------- Favorit list ---------- */
+  function renderFav(){
+    $('favlist').innerHTML='';
+    PLACES.forEach(p=>{
+      const b=document.createElement('button');
+      b.className='tile'+(p.id===FOCUS_DEFAULT?' foc':'');
+      b.setAttribute('aria-label',`${p.name}. ${p.desc}. Jarak ${p.dist}. Ketuk dua kali untuk memulai rute.`);
+      b.innerHTML=`<span><span class="n">${p.name}</span><span class="d">${p.desc}</span>${p.id===FOCUS_DEFAULT?'<span class="ck">Ketuk dua kali untuk pilih</span>':''}</span><span class="dist">${p.dist}</span>`;
+      activatable(b,()=>startGuide(p));
+      $('favlist').appendChild(b);
+    });
+  }
+
+  /* ---------- Voice (F1) ---------- */
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  let recog=null;
+  if(SR){ recog=new SR(); recog.lang='id-ID'; recog.interimResults=false; recog.maxAlternatives=3;
+    recog.onresult=e=>{ const t=(e.results[0][0].transcript||'').toLowerCase(); handleVoice(t); };
+    recog.onerror=()=>failVoice('Suara tidak terdengar.');
+    recog.onnomatch=()=>failVoice('Tujuan tidak dikenali.');
+  }
+  let failTimer=null;
+  function startListening(){
+    openOv('ov-listen'); vibe(H.straight); $('listenStatus').textContent='Sebutkan tujuan Anda';
+    speak('Mendengarkan. Sebutkan nama gedung tujuan.');
+    if(!recog){ $('listenStatus').textContent='Browser tak mendukung pengenalan suara — gunakan Favorit (geser kiri).'; return; }
+    try{ recog.start(); }catch(e){}
+    clearTimeout(failTimer); failTimer=setTimeout(()=>{},9000);
+  }
+  function handleVoice(t){
+    const hit=PLACES.find(p=>p.kw.some(k=>t.includes(k))||t.includes(p.name.toLowerCase()));
+    if(hit){ closeOv('ov-listen'); startGuide(hit); }
+    else failVoice('Tujuan "'+t+'" tidak dikenali.');
+  }
+  function failVoice(msg){
+    $('listenStatus').textContent=msg+' Membuka Favorit…';
+    vibe(H.left); speak((msg||'Tujuan tidak dikenali.')+' Ketuk daftar favorit untuk memilih manual.');
+    setTimeout(()=>{ closeOv('ov-listen'); goPage(0); },1600);
+  }
+  $('listenCancel').addEventListener('click',()=>{ try{recog&&recog.stop()}catch(e){}; closeOv('ov-listen'); speechSynthesis.cancel(); });
+
+  /* ---------- Guide / turn-by-turn (F2 + F3 + F4) ---------- */
+  function buildSteps(name){
+    return [
+      {dir:'LURUS',dist:'15 METER',arrow:'↑',say:`Maju lurus 15 meter menuju ${name}`,h:H.straight,obstacle:'Perhatikan ada tangga turun di depan'},
+      {dir:'BELOK KANAN',dist:'8 METER',arrow:'↱',say:'Belok kanan di pertigaan selasar, lalu maju 8 meter',h:H.right},
+      {dir:'LURUS',dist:'20 METER',arrow:'↑',say:'Maju lurus 20 meter, lewati selasar kantin di kiri Anda',h:H.straight},
+      {dir:'TIBA',dist:'',arrow:'◎',say:`Anda tiba di ${name}`,h:H.arrive,arrive:true},
+    ];
+  }
+  let steps=[],si=0,stepTimer=null,curName='';
+  function showStep(){
+    const s=steps[si];
+    $('guideArrow').textContent=s.arrow;
+    $('guideInstr').innerHTML=s.dist?`${s.dir}<br>${s.dist}`:s.dir;
+    $('guideWarn').textContent=s.obstacle||'';
+    $('guideZone').classList.toggle('obstacle',!!s.obstacle);
+    let line=s.say+(s.obstacle?'. '+s.obstacle:'');
+    speak(line); vibe(s.h);
+    clearTimeout(stepTimer);
+    if(!s.arrive) stepTimer=setTimeout(()=>{ si++; showStep(); },5200);
+  }
+  function startGuide(place){
+    closeAll(); curName=place.name; steps=buildSteps(place.name); si=0;
+    $('guideRoute').textContent='Rute: Lokasi Anda  →  '+place.name;
+    openOv('ov-guide'); vibe(H.straight); showStep();
+  }
+  activatable($('guideZone'),()=>{ speechSynthesis.cancel(); const s=steps[si]; speak((s.say||'')+(s.obstacle?'. '+s.obstacle:'')); vibe(s.h); });
+  activatable($('guideCancel'),()=>{ clearTimeout(stepTimer); closeOv('ov-guide'); speechSynthesis.cancel(); speak('Rute dibatalkan.'); goPage(1); });
+
+  /* ---------- SOS (F5) ---------- */
+  function startSOS(){
+    closeAll(); openOv('ov-calling'); vibe(H.arrive);
+    speak('Menghubungi Pusat Keamanan Kampus ITS. Mengirim lokasi Anda.');
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(
+        pos=>{ const {latitude:la,longitude:lo}=pos.coords; $('gps').textContent=`Lokasi terkirim: ${la.toFixed(4)}, ${lo.toFixed(4)}`; },
+        ()=>{ $('gps').textContent='Lokasi GPS tidak tersedia — sebutkan posisi Anda saat ditelepon.'; },
+        {enableHighAccuracy:true,timeout:6000}
+      );
+    }
+    // repeating alert buzz
+    let n=0; const t=setInterval(()=>{ if(!$('ov-calling').classList.contains('open')||n++>6){clearInterval(t);return;} vibe([300]); },1200);
+  }
+  $('callCancel').addEventListener('click',()=>{ closeOv('ov-calling'); speechSynthesis.cancel(); speak('Panggilan darurat dibatalkan.'); });
+
+  /* ---------- Wire big buttons ---------- */
+  activatable($('micBtn'),startListening);
+  activatable($('sosBtn'),startSOS);
+
+  /* ---------- Status bar: clock / battery / gps ---------- */
+  function tickClock(){ const d=new Date(); $('clock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); }
+  tickClock(); setInterval(tickClock,15000);
+  if(navigator.getBattery){ navigator.getBattery().then(b=>{ const u=()=>$('batt').textContent='Baterai '+Math.round(b.level*100)+'%'; u(); b.addEventListener('levelchange',u); }); }
+  else $('batt').textContent='Baterai 80%';
+  if(navigator.geolocation){
+    navigator.geolocation.watchPosition(
+      pos=>{ const a=pos.coords.accuracy; $('status').firstChild.textContent=a<15?'GPS: Akurat':'GPS: Lemah'; },
+      ()=>{ $('status').firstChild.textContent='GPS: Nonaktif'; },{enableHighAccuracy:true,maximumAge:8000}
+    );
+  } else $('status').firstChild.textContent='GPS: Akurat';
+
+  renderFav();
+
+  /* PWA offline */
+  if('serviceWorker'in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>

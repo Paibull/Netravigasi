@@ -261,19 +261,21 @@
   const $=id=>document.getElementById(id);
 
   /* ---------- Data: gedung ITS ---------- */
+  // jarak = acuan dari Asrama Mahasiswa (titik Anda), urut terdekat
   const PLACES=[
-    {id:'kantin',  name:'Kantin Pusat',            desc:'Pusat kuliner mahasiswa',          dist:'± 140 m', kw:['kantin','makan','kuliner']},
-    {id:'ccws',    name:'CCWS',                    desc:'Ruang kolaboratif co-working',     dist:'± 180 m', kw:['ccws','co working','coworking','kreatif']},
-    {id:'perpus',  name:'Perpustakaan ITS',        desc:'Perpustakaan pusat & ruang baca',  dist:'± 210 m', kw:['perpustakaan','perpus','library']},
-    {id:'masjid',  name:'Masjid Manarul Ilmi',     desc:'Masjid pusat kampus',              dist:'± 260 m', kw:['masjid','manarul ilmi','manarul','sholat','salat']},
-    {id:'medical', name:'Medical Center ITS',      desc:'Poliklinik & layanan kesehatan',   dist:'± 290 m', kw:['medical center','medical','poliklinik','klinik','kesehatan','dokter']},
-    {id:'tower1',  name:'Tower 1',                 desc:'',                                 dist:'± 320 m', kw:['tower satu','tower 1','menara mipa','mipa']},
-    {id:'robotika',name:'Gedung Robotika',         desc:'Pusat riset robotika & AI',        dist:'± 340 m', kw:['robotika','robot','riset']},
-    {id:'graha',   name:'Graha Sepuluh Nopember',  desc:'Auditorium & wisuda',              dist:'± 380 m', kw:['graha','sepuluh nopember','auditorium','wisuda']},
-    {id:'tower2',  name:'Tower 2',                 desc:'',                                 dist:'± 450 m', kw:['tower dua','tower 2']},
-    {id:'rektorat',name:'Gedung Rektorat',         desc:'Kantor pusat & administrasi',      dist:'± 500 m', kw:['rektorat','gedung pusat','administrasi']},
-    {id:'plaza',   name:'Plaza Dr. Angka',         desc:'Plaza & gerbang utama ITS',        dist:'± 600 m', kw:['plaza','dr angka','doktor angka','gerbang']},
-    {id:'asrama',  name:'Asrama Mahasiswa',        desc:'Hunian mahasiswa ITS',             dist:'± 700 m', kw:['asrama','hunian','dormitory']},
+    {id:'asrama',  name:'Asrama Mahasiswa',        dist:'Di sini', kw:['asrama','hunian','dormitory']},
+    {id:'informatika',name:'Teknik Informatika',  dist:'± 280 m', kw:['informatika','teknik informatika','if','ti','komputer']},
+    {id:'tower1',  name:'Tower 1',                 dist:'± 400 m', kw:['tower satu','tower 1','menara mipa','mipa']},
+    {id:'tower2',  name:'Tower 2',                 dist:'± 450 m', kw:['tower dua','tower 2']},
+    {id:'medical', name:'Medical Center ITS',      dist:'± 520 m', kw:['medical center','medical','poliklinik','klinik','kesehatan','dokter']},
+    {id:'perpus',  name:'Perpustakaan ITS',        dist:'± 560 m', kw:['perpustakaan','perpus','library']},
+    {id:'kantin',  name:'Kantin Pusat',            dist:'± 600 m', kw:['kantin','makan','kuliner']},
+    {id:'ccws',    name:'CCWS',                    dist:'± 640 m', kw:['ccws','co working','coworking','kreatif']},
+    {id:'masjid',  name:'Masjid Manarul Ilmi',     dist:'± 680 m', kw:['masjid','manarul ilmi','manarul','sholat','salat']},
+    {id:'robotika',name:'Gedung Robotika',         dist:'± 740 m', kw:['robotika','robot','riset']},
+    {id:'rektorat',name:'Gedung Rektorat',         dist:'± 830 m', kw:['rektorat','gedung pusat','administrasi']},
+    {id:'graha',   name:'Graha Sepuluh Nopember',  dist:'± 1.0 km',kw:['graha','sepuluh nopember','auditorium','wisuda']},
+    {id:'plaza',   name:'Plaza Dr. Angka',         dist:'± 1.1 km',kw:['plaza','dr angka','doktor angka','gerbang']},
   ];
 
   /* ---------- Haptics (F3) ---------- */
@@ -323,9 +325,9 @@
     $('dots').querySelectorAll('.dot').forEach((d,k)=>d.classList.toggle('on',k===i));
   }
   pager.addEventListener('scroll',()=>{ requestAnimationFrame(syncDots); },{passive:true});
-  function goPage(i){ pager.scrollTo({left:pager.clientWidth*i,behavior:'smooth'}); }
-  // mulai di tengah (Input Suara) tanpa animasi geser; set langsung agar tak ada kedip Favorit
-  function landOnSuara(){ pager.scrollLeft=pager.clientWidth; syncDots(); }
+  function goPage(i){ const p=pager.children[i]; pager.scrollTo({left:p?p.offsetLeft:pager.clientWidth*i,behavior:'smooth'}); }
+  // mulai di tengah (Input Suara) tanpa animasi geser; offsetLeft presisi agar tak ada sliver page lain
+  function landOnSuara(){ pager.scrollLeft=$('page-suara').offsetLeft; syncDots(); }
   // ?#fav/#sos/#listen/#guide/#calling untuk deep-link & uji
   function applyHash(){ const h=location.hash.slice(1);
     if(h==='fav') goPage(0); else if(h==='sos') goPage(2);
@@ -345,8 +347,8 @@
     PLACES.forEach(p=>{
       const b=document.createElement('button');
       b.className='tile';
-      b.setAttribute('aria-label',`${p.name}. ${p.desc}. Jarak ${p.dist}. Ketuk dua kali untuk memulai rute.`);
-      b.innerHTML=`<span class="ti"><span class="n">${p.name}</span><span class="d">${p.desc}</span></span><span class="dist">${p.dist}</span>`;
+      b.setAttribute('aria-label',`${p.name}. ${p.dist.startsWith('±')?'Jarak '+p.dist:p.dist}. Ketuk dua kali untuk memulai rute.`);
+      b.innerHTML=`<span class="ti"><span class="n">${p.name}</span></span><span class="dist">${p.dist}</span>`;
       activatable(b,()=>startGuide(p));
       $('favlist').appendChild(b);
     });
